@@ -1,0 +1,68 @@
+/* Action Toggle */
+.action-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: rgba(15, 15, 35, 0.6);
+  border-radius: 10px;
+  padding: 0.4rem;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.3);
+  max-width: 100%;
+  width: 100%;
+  height: 60px;
+  margin-left: auto;
+  margin-right: auto;
+  flex-shrink: 0;
+}
+
+.toggle-button {
+  flex: 1;
+  background: transparent;
+  color: #888;
+  border: none;
+  padding: 0.75rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.toggle-button:hover:not(:disabled) {
+  color: #00d4ff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.toggle-button.active {
+  background: linear-gradient(135deg, #7c3aed 0%, #00d4ff 100%);
+  color: white;
+  box-shadow: 0 3px 12px rgba(124, 58, 237, 0.3);
+}
+
+.toggle-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .action-toggle {
+    max-width: 100%;
+    padding: 0.3rem;
+    height: 50px;
+  }
+  
+  .toggle-button {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
+    min-width: 80px;
+    flex: 1;
+  }
+} 

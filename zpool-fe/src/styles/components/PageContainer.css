@@ -1,0 +1,36 @@
+/* Page Container */
+.page-container {
+  background: rgba(15, 15, 35, 0.8);
+  padding: 1.5rem;
+  border-radius: 12px;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 400px;
+  width: 800px;
+  max-width: 800px;
+  min-width: 800px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-container h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #00d4ff;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page-container {
+    padding: 1rem;
+    min-height: 300px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 100%;
+  }
+} 

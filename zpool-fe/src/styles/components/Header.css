@@ -1,0 +1,303 @@
+/* Header Styles */
+.App-header {
+  background: rgba(15, 15, 35, 0.95);
+  backdrop-filter: blur(20px);
+  padding: 1.5rem 2rem 0.75rem 2rem;
+  color: white;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 1005;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+  gap: 2rem;
+}
+
+.header-content {
+  flex-shrink: 0;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.logo-icon {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.logo-text h1 {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-text p {
+  margin: 0;
+  font-size: 1rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+
+.top-balance {
+  flex: 1;
+  max-width: 600px;
+}
+
+.header-tabs {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-subtitle {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tech-badge {
+  background: rgba(124, 58, 237, 0.1);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  color: #7c3aed;
+  transition: all 0.3s ease;
+}
+
+.tech-badge:hover {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.5);
+  transform: translateY(-1px);
+}
+
+/* Tab Buttons */
+.tab-container {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.tab-button {
+  background: transparent;
+  color: #888;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.tab-button:hover {
+  color: #00d4ff;
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, #7c3aed 0%, #00d4ff 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+/* Account Dropdown */
+.account-dropdown {
+  position: relative;
+}
+
+.account-dropdown-toggle {
+  background: transparent;
+  border: none;
+  color: #00d4ff;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.account-dropdown-toggle:hover {
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.dropdown-arrow {
+  font-size: 0.7rem;
+  transition: transform 0.3s ease;
+}
+
+.account-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: rgba(15, 15, 35, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  margin-top: 0.5rem;
+  min-width: 250px;
+  padding: 1rem;
+}
+
+.rpc-status, .fhe-status, .network-selection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rpc-label, .fhe-label, .network-label {
+  font-size: 0.8rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.rpc-name, .fhe-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.rpc-name.healthy, .fhe-name.available, .fhe-name.ready {
+  color: #22c55e;
+}
+
+.rpc-name.unhealthy, .fhe-name.unavailable, .fhe-name.error {
+  color: #ef4444;
+}
+
+.fhe-name.loading {
+  color: #f59e0b;
+}
+
+.network-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.network-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #888;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: all 0.3s ease;
+}
+
+.network-btn:hover {
+  border-color: #00d4ff;
+  color: #00d4ff;
+}
+
+.network-btn.active {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: #00d4ff;
+  color: #00d4ff;
+}
+
+.dropdown-item {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  width: 100%;
+  text-align: left;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-item.disconnect {
+  color: #ef4444;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+}
+
+.dropdown-item.disconnect:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .App-header {
+    padding: 1rem 1.5rem 0.5rem 1.5rem;
+  }
+  
+  .logo-text h1 {
+    font-size: 1.8rem;
+  }
+  
+  .logo-icon {
+    font-size: 2rem;
+  }
+  
+  .logo-text p {
+    font-size: 0.9rem;
+  }
+  
+  .tech-badge {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+  }
+  
+  .tab-container {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .tab-button {
+    width: 100%;
+    max-width: 300px;
+    min-width: auto;
+    flex: none;
+    justify-content: center;
+  }
+  
+  .account-dropdown-menu {
+    min-width: 200px;
+    right: -50px;
+  }
+} 
