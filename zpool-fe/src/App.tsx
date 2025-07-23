@@ -10,6 +10,7 @@ import { useFHE } from "./hooks/useFHE";
 import { useTotalBalance } from "./hooks/useTotalBalance";
 import { useBlockchainEvents } from "./hooks/useBlockchainEvents";
 import { TransferNotifications } from "./components/TransferNotifications";
+import CacheStats from "./components/CacheStats";
 import { DEFAULT_TOKEN, TokenConfig } from "./config/tokens";
 import { saveWalletState, clearWalletState, autoReconnectWallet } from "./utils/walletPersistence";
 
@@ -467,6 +468,7 @@ function App() {
         rpcUrl={getCurrentRpcEndpoints()[currentRpcIndex]?.url || ""}
         isConnected={!!account}
       />
+      <CacheStats />
     </ToastProvider>
   );
 }

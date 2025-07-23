@@ -1,47 +1,129 @@
 import cacheService from '../services/cacheService';
 
 /**
- * Clear all cache related to a specific user
+ * Clear cache after deposit operation
  */
-export const clearUserCache = (userAddress: string): void => {
-  console.log(`🗑️ Clearing cache for user: ${userAddress}`);
+export const clearCacheAfterDeposit = (userAddress: string, tokenAddress: string) => {
+  console.log('🗑️ Clearing cache after deposit:', { userAddress, tokenAddress });
+  
+  // Clear user-specific cache
   cacheService.clearUserCache(userAddress);
-};
-
-/**
- * Clear all cache related to a specific token
- */
-export const clearTokenCache = (tokenAddress: string): void => {
-  console.log(`🗑️ Clearing cache for token: ${tokenAddress}`);
+  
+  // Clear token-specific cache
   cacheService.clearTokenCache(tokenAddress);
+  
+  // Clear total balance cache
+  const totalBalanceKey = `total-balance:${userAddress.toLowerCase()}:fhe`;
+  cacheService.delete(totalBalanceKey);
+  
+  console.log('✅ Cache cleared after deposit');
 };
 
 /**
- * Clear cache after a deposit transaction
+ * Clear cache after withdrawal operation
  */
-export const clearCacheAfterDeposit = (userAddress: string, tokenAddress: string): void => {
-  console.log(`🗑️ Clearing cache after deposit: ${userAddress} -> ${tokenAddress}`);
+export const clearCacheAfterWithdrawal = (userAddress: string, tokenAddress: string) => {
+  console.log('🗑️ Clearing cache after withdrawal:', { userAddress, tokenAddress });
+  
+  // Clear user-specific cache
   cacheService.clearUserCache(userAddress);
+  
+  // Clear token-specific cache
   cacheService.clearTokenCache(tokenAddress);
+  
+  // Clear total balance cache
+  const totalBalanceKey = `total-balance:${userAddress.toLowerCase()}:fhe`;
+  cacheService.delete(totalBalanceKey);
+  
+  console.log('✅ Cache cleared after withdrawal');
 };
 
 /**
- * Clear cache after a withdrawal transaction
+ * Clear cache after transfer operation
  */
-export const clearCacheAfterWithdrawal = (userAddress: string, tokenAddress: string): void => {
-  console.log(`🗑️ Clearing cache after withdrawal: ${userAddress} -> ${tokenAddress}`);
+export const clearCacheAfterTransfer = (
+  senderAddress: string, 
+  recipientAddress: string, 
+  tokenAddress: string
+) => {
+  console.log('🗑️ Clearing cache after transfer:', { 
+    senderAddress, 
+    recipientAddress, 
+    tokenAddress 
+  });
+  
+  // Clear sender cache
+  cacheService.clearUserCache(senderAddress);
+  
+  // Clear recipient cache
+  cacheService.clearUserCache(recipientAddress);
+  
+  // Clear token cache
+  cacheService.clearTokenCache(tokenAddress);
+  
+  // Clear total balance cache for both users
+  const senderTotalBalanceKey = `total-balance:${senderAddress.toLowerCase()}:fhe`;
+  const recipientTotalBalanceKey = `total-balance:${recipientAddress.toLowerCase()}:fhe`;
+  
+  cacheService.delete(senderTotalBalanceKey);
+  cacheService.delete(recipientTotalBalanceKey);
+  
+  console.log('✅ Cache cleared after transfer');
+};
+
+/**
+ * Clear cache after approval operation
+ */
+export const clearCacheAfterApproval = (
+  userAddress: string, 
+  tokenAddress: string, 
+  spenderAddress: string
+) => {
+  console.log('🗑️ Clearing cache after approval:', { 
+    userAddress, 
+    tokenAddress, 
+    spenderAddress 
+  });
+  
+  // Clear allowance cache
+  const allowanceKey = `allowance:${userAddress.toLowerCase()}:${tokenAddress.toLowerCase()}:${spenderAddress.toLowerCase()}`;
+  cacheService.delete(allowanceKey);
+  
+  console.log('✅ Cache cleared after approval');
+};
+
+/**
+ * Clear all cache for debugging
+ */
+export const clearAllCache = () => {
+  console.log('🗑️ Clearing all cache for debugging');
+  cacheService.clear();
+  console.log('✅ All cache cleared');
+};
+
+/**
+ * Get cache statistics for debugging
+ */
+export const getCacheStats = () => {
+  return cacheService.getStats();
+};
+
+/**
+ * Clear cache for specific user
+ */
+export const clearUserCache = (userAddress: string) => {
+  console.log('🗑️ Clearing cache for user:', userAddress);
   cacheService.clearUserCache(userAddress);
-  cacheService.clearTokenCache(tokenAddress);
+  console.log('✅ User cache cleared');
 };
 
-
-
 /**
- * Clear cache after an approval transaction
+ * Clear cache for specific token
  */
-export const clearCacheAfterApproval = (userAddress: string, tokenAddress: string): void => {
-  console.log(`🗑️ Clearing cache after approval: ${userAddress} -> ${tokenAddress}`);
-  cacheService.clearPattern(`allowance:${userAddress.toLowerCase()}:${tokenAddress.toLowerCase()}`);
+export const clearTokenCache = (tokenAddress: string) => {
+  console.log('🗑️ Clearing cache for token:', tokenAddress);
+  cacheService.clearTokenCache(tokenAddress);
+  console.log('✅ Token cache cleared');
 };
 
 /**
@@ -78,21 +160,6 @@ export const clearContractCache = (): void => {
   console.log('🗑️ Clearing contract cache');
   cacheService.clearPattern('contract-exists:');
   cacheService.clearPattern('token-support:');
-};
-
-/**
- * Clear all cache (nuclear option)
- */
-export const clearAllCache = (): void => {
-  console.log('🗑️ Clearing all cache');
-  cacheService.clear();
-};
-
-/**
- * Get cache statistics
- */
-export const getCacheStats = () => {
-  return cacheService.getStats();
 };
 
 /**
