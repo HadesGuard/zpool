@@ -58,27 +58,31 @@
 
 /* Toast Types */
 .toast-success {
-  background: rgba(76, 175, 80, 0.15);
+  background: rgba(76, 175, 80, 0.25);
   border-left: 4px solid #4caf50;
-  color: #4caf50;
+  color: #e8f5e8;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .toast-error {
-  background: rgba(244, 67, 54, 0.15);
+  background: rgba(244, 67, 54, 0.25);
   border-left: 4px solid #f44336;
-  color: #f44336;
+  color: #ffebee;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .toast-info {
-  background: rgba(33, 150, 243, 0.15);
+  background: rgba(33, 150, 243, 0.25);
   border-left: 4px solid #2196f3;
-  color: #2196f3;
+  color: #e3f2fd;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .toast-warning {
-  background: rgba(255, 193, 7, 0.15);
+  background: rgba(255, 193, 7, 0.25);
   border-left: 4px solid #ffc107;
-  color: #ffc107;
+  color: #fff8e1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 /* Animations */
