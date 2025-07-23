@@ -91,6 +91,17 @@
   font-size: 0.8rem;
 }
 
+.token-selector-btn {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+}
+
 .token-selector-btn:hover {
   color: #00d4ff;
   background: rgba(255, 255, 255, 0.1);

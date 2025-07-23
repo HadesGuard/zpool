@@ -1,6 +1,5 @@
 import testTokenAbi from '../abi/TestToken.json';
 import testToken2Abi from '../abi/TestToken2.json';
-import testToken3Abi from '../abi/TestToken3.json';
 
 export interface TokenConfig {
   address: string;
@@ -31,15 +30,6 @@ export const AVAILABLE_TOKENS: TokenConfig[] = [
     abi: testToken2Abi.abi,
     icon: "🔬",
     description: "Second test token for development and testing"
-  },
-  {
-    address: "0x20e95adE07D966AeA72537347B8C364e67F3285D", // TestToken3 on Sepolia
-    symbol: "TEST3",
-    name: "Test Token 3",
-    decimals: 18,
-    abi: testToken3Abi.abi,
-    icon: "⚗️",
-    description: "Third test token for development and testing"
   }
 ];
 

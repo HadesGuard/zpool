@@ -4,6 +4,9 @@ import { ZPOOL_ADDRESS } from '../contracts';
 // Import Zama SDK from bundle as recommended in docs
 import { initSDK, createInstance, SepoliaConfig } from "@zama-fhe/relayer-sdk/bundle";
 
+// Import centralized cache service
+import cacheService, { CacheKeys, CacheTTL } from './cacheService';
+
 // Types for FHE operations
 export interface FHEInstance {
   encrypt: (value: number) => Promise<{ encryptedValue: string; proof: string }>;
@@ -23,8 +26,8 @@ class RealFHEService {
   private isInitialized = false;
   private sdkInstance: any = null;
   private initPromise: Promise<void> | null = null;
-  private decryptCache: Map<string, { value: number; timestamp: number }> = new Map();
-  private readonly DECRYPT_CACHE_DURATION = 30000; // 30 seconds (increased from 10 seconds)
+  private keypairCache: Map<string, { keypair: any; timestamp: number }> = new Map();
+  private readonly KEYPAIR_CACHE_DURATION = 300000; // 5 minutes
 
   async init(): Promise<void> {
     if (this.isInitialized) return;
@@ -97,16 +100,23 @@ class RealFHEService {
       encrypt: async (value: number): Promise<{ encryptedValue: string; proof: string }> => {
         console.log(`Encrypting value: ${value}`);
         
+        // Check cache first (encryption is deterministic for same value and user)
+        const userAddress = config.account;
+        if (!userAddress) {
+          throw new Error('User address is required for FHE encryption. Please connect your wallet first.');
+        }
+        
+        const cacheKey = CacheKeys.encrypt(value, userAddress);
+        const cached = cacheService.get<{ encryptedValue: string; proof: string }>(cacheKey);
+        if (cached !== null) {
+          console.log('📦 Using cached encryption result');
+          return cached;
+        }
+        
         try {
           // Use real Zama SDK for encryption
-          console.log('Using real Zama SDK for encryption...');
           
           // Create encrypted input using Zama SDK
-          const userAddress = config.account;
-          if (!userAddress) {
-            throw new Error('User address is required for FHE encryption. Please connect your wallet first.');
-          }
-          console.log('🧪 Encrypt for:', { contract: ZPOOL_ADDRESS, user: userAddress });
           const buffer = this.sdkInstance.createEncryptedInput(
             ZPOOL_ADDRESS, // Contract address
             userAddress // User address
@@ -118,10 +128,6 @@ class RealFHEService {
           // Encrypt and get ciphertext handles
           const ciphertexts = await buffer.encrypt();
           
-          console.log('Encryption successful:', ciphertexts);
-          console.log('Ciphertext handle:', ciphertexts.handles[0]);
-          console.log('Input proof:', ciphertexts.inputProof);
-          
           // Convert Uint8Array to hex string properly
           const handleArray = Array.from(ciphertexts.handles[0]) as number[];
           const encryptedValue = '0x' + handleArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -130,10 +136,12 @@ class RealFHEService {
           const proofArray = Array.from(ciphertexts.inputProof) as number[];
           const proof = '0x' + proofArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
           
-          console.log('Generated encrypted value:', encryptedValue);
-          console.log('Generated proof:', proof);
+          const result = { encryptedValue, proof };
           
-          return { encryptedValue, proof };
+          // Cache the result
+          cacheService.set(cacheKey, result, CacheTTL.ENCRYPT);
+          
+          return result;
         } catch (error) {
           console.error('Encryption error:', error);
           throw new Error('Encryption failed: ' + error);
@@ -141,14 +149,34 @@ class RealFHEService {
       },
       
       decrypt: async (encryptedValue: string): Promise<number> => {
-        console.log(`Decrypting value: ${encryptedValue}`);
+        // Check cache first
+        const cacheKey = CacheKeys.decrypt(encryptedValue);
+        const cached = cacheService.get<number>(cacheKey);
+        if (cached !== null) {
+          return cached;
+        }
+        
         try {
           // Use real Zama SDK for decryption
-          console.log('Using real Zama SDK for decryption...');
           
-          // Generate keypair for user
-          const keypair = this.sdkInstance.generateKeypair();
-          console.log('Generated keypair:', keypair);
+          // Get or create keypair for user
+          const userAddress = config.account;
+          let keypair = null;
+          
+          if (userAddress) {
+            const keypairCacheKey = `keypair:${userAddress}`;
+            const now = Date.now();
+            const cachedKeypair = this.keypairCache.get(keypairCacheKey);
+            
+            if (cachedKeypair && (now - cachedKeypair.timestamp) < this.KEYPAIR_CACHE_DURATION) {
+              keypair = cachedKeypair.keypair;
+            } else {
+              keypair = this.sdkInstance.generateKeypair();
+              this.keypairCache.set(keypairCacheKey, { keypair, timestamp: now });
+            }
+          } else {
+            keypair = this.sdkInstance.generateKeypair();
+          }
           
           // Prepare handle-contract pairs
           const handleContractPairs = [
@@ -170,8 +198,6 @@ class RealFHEService {
             durationDays
           );
           
-          console.log('EIP712 data:', eip712);
-          
           // Get signer from window.ethereum
           const provider = new ethers.BrowserProvider((window as any).ethereum);
           const signer = await provider.getSigner();
@@ -185,8 +211,6 @@ class RealFHEService {
             eip712.message,
           );
           
-          console.log('Signature:', signature);
-          
           // Perform user decryption
           const result = await this.sdkInstance.userDecrypt(
             handleContractPairs,
@@ -199,13 +223,15 @@ class RealFHEService {
             durationDays,
           );
           
-          console.log('User decryption result:', result);
-          
           // Extract decrypted value
           const decryptedValue = result[encryptedValue];
-          console.log('Decrypted value:', decryptedValue);
           
-          return Number(decryptedValue);
+          const resultValue = Number(decryptedValue);
+          
+          // Cache the result
+          cacheService.set(cacheKey, resultValue, CacheTTL.DECRYPT);
+          
+          return resultValue;
         } catch (error) {
           console.error('Decryption error:', error);
           throw new Error('Decryption failed: ' + error);
@@ -216,11 +242,11 @@ class RealFHEService {
         console.log(`Public decrypting value: ${encryptedValue}`);
         
         // Check cache first
-        const now = Date.now();
-        const cached = this.decryptCache.get(encryptedValue);
-        if (cached && (now - cached.timestamp) < this.DECRYPT_CACHE_DURATION) {
-          console.log('📦 Using cached decryption result');
-          return cached.value;
+        const cacheKey = CacheKeys.publicDecrypt(encryptedValue);
+        const cached = cacheService.get<number>(cacheKey);
+        if (cached !== null) {
+          console.log('📦 Using cached public decryption result');
+          return cached;
         }
         
         try {
@@ -252,7 +278,7 @@ class RealFHEService {
           }
           
           // Cache the result
-          this.decryptCache.set(encryptedValue, { value: result, timestamp: now });
+          cacheService.set(cacheKey, result, CacheTTL.PUBLIC_DECRYPT);
           return result;
         } catch (error) {
           console.error('Public decryption error:', error);
@@ -288,13 +314,18 @@ class RealFHEService {
     this.isInitialized = false;
     this.sdkInstance = null;
     this.initPromise = null;
-    this.decryptCache.clear();
+    this.keypairCache.clear();
+    // Clear FHE-related cache
+    cacheService.clearPattern('encrypt:');
+    cacheService.clearPattern('decrypt:');
+    cacheService.clearPattern('public-decrypt:');
   }
 
   // Method to clear decrypt cache
   clearDecryptCache(): void {
     console.log('🗑️ Clearing FHE decrypt cache');
-    this.decryptCache.clear();
+    cacheService.clearPattern('decrypt:');
+    cacheService.clearPattern('public-decrypt:');
   }
 }
 

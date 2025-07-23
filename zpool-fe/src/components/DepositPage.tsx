@@ -3,6 +3,9 @@ import { ethers } from 'ethers';
 import { ZPOOL_ADDRESS, ZPOOL_ABI } from '../contracts';
 import { TokenConfig } from '../config/tokens';
 import { useToast } from '../contexts/ToastContext';
+import { useAllowance } from '../hooks/useAllowance';
+import cacheService, { CacheKeys, CacheTTL } from '../services/cacheService';
+import { clearCacheAfterDeposit, clearCacheAfterWithdrawal } from '../utils/cacheUtils';
 import '../styles/components/PageContainer.css';
 import '../styles/components/Form.css';
 import '../styles/components/ActionToggle.css';
@@ -40,35 +43,58 @@ const PoolPage: React.FC<PoolPageProps> = ({
   
   const { showSuccess, showError, showInfo } = useToast();
 
+  // Use allowance hook for better caching
+  const { allowanceInfo, requestApproval } = useAllowance(account, selectedToken, amount);
+
   // Check if contracts exist and TestToken is supported by ZPool
   useEffect(() => {
     const checkContractsAndSupport = async () => {
       if (!account) return;
       
       try {
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        // Check cache first for contract existence
+        const zpoolExistsKey = CacheKeys.contractExists(ZPOOL_ADDRESS);
+        const tokenExistsKey = CacheKeys.contractExists(selectedToken.address);
+        const tokenSupportKey = CacheKeys.tokenSupport(selectedToken.address);
         
-        // First check if ZPool contract exists
-        const zpoolCode = await provider.getCode(ZPOOL_ADDRESS);
-        if (zpoolCode === '0x') {
+        let zpoolExists = cacheService.get<boolean>(zpoolExistsKey);
+        let tokenExists = cacheService.get<boolean>(tokenExistsKey);
+        let isSupported = cacheService.get<boolean>(tokenSupportKey);
+        
+        if (zpoolExists === null) {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const zpoolCode = await provider.getCode(ZPOOL_ADDRESS);
+          zpoolExists = zpoolCode !== '0x';
+          cacheService.set(zpoolExistsKey, zpoolExists, CacheTTL.CONTRACT_EXISTS);
+        }
+        
+        if (!zpoolExists) {
           showError("ZPool contract not found at the specified address. Please deploy the contracts first.");
           return;
         }
         
-        // Check if TestToken contract exists
-        const tokenCode = await provider.getCode(selectedToken.address);
-        if (tokenCode === '0x') {
+        if (tokenExists === null) {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const tokenCode = await provider.getCode(selectedToken.address);
+          tokenExists = tokenCode !== '0x';
+          cacheService.set(tokenExistsKey, tokenExists, CacheTTL.CONTRACT_EXISTS);
+        }
+        
+        if (!tokenExists) {
           showError(`${selectedToken.name} contract not found at the specified address. Please deploy the contracts first.`);
           return;
         }
         
-        const zpool = new ethers.Contract(ZPOOL_ADDRESS, ZPOOL_ABI, provider);
+        if (isSupported === null) {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const zpool = new ethers.Contract(ZPOOL_ADDRESS, ZPOOL_ABI, provider);
+          isSupported = await zpool.supportedTokens(selectedToken.address);
+          cacheService.set(tokenSupportKey, isSupported, CacheTTL.TOKEN_SUPPORT);
+        }
         
-        // Check if TestToken is supported
-        const supported = await zpool.supportedTokens(selectedToken.address);
-        setIsTokenSupported(supported);
+        setIsTokenSupported(isSupported || false);
         
-        if (!supported) {
+        if (!isSupported) {
           showError(`${selectedToken.name} is not supported by ZPool. Please add it first.`);
         }
       } catch (error) {
@@ -135,35 +161,27 @@ const PoolPage: React.FC<PoolPageProps> = ({
         throw new Error(`Insufficient ${selectedToken.name} balance. You have ${ethers.formatEther(balance)}, but need ${amount} tokens. Please mint more tokens first.`);
       }
 
-      // Check allowance
-      const allowance = await tokenContract.allowance(account, ZPOOL_ADDRESS);
+      // Check allowance using the hook
       console.log("Allowance check:", {
-        allowance: allowance.toString(),
-        allowanceFormatted: ethers.formatEther(allowance),
+        allowance: allowanceInfo.allowance,
+        allowanceFormatted: allowanceInfo.allowanceFormatted,
         amountWei: amountWei.toString(),
-        hasEnoughAllowance: allowance >= amountWei
+        hasEnoughAllowance: allowanceInfo.hasEnoughAllowance
       });
 
-      if (allowance < amountWei) {
+      if (!allowanceInfo.hasEnoughAllowance) {
         console.log("Insufficient allowance, requesting approval...");
         showInfo("Requesting token approval...");
         
         // Approve a larger amount to avoid frequent approvals
         // Approve 10x the current amount or 10000 tokens, whichever is larger
         const approveAmount = amountWei * BigInt(10) > ethers.parseEther("10000") 
-          ? amountWei * BigInt(10) 
-          : ethers.parseEther("10000");
-        const approveTx = await tokenContract.approve(ZPOOL_ADDRESS, approveAmount);
-        await approveTx.wait();
-        console.log("Approval successful for", ethers.formatEther(approveAmount), "tokens");
-        showSuccess(`Approved ${ethers.formatEther(approveAmount)} tokens for future deposits`);
+          ? ethers.formatEther(amountWei * BigInt(10))
+          : "10000";
         
-        // Check allowance again after approval
-        const newAllowance = await tokenContract.allowance(account, ZPOOL_ADDRESS);
-        console.log("Allowance after approval:", {
-          newAllowance: newAllowance.toString(),
-          newAllowanceFormatted: ethers.formatEther(newAllowance)
-        });
+        await requestApproval(approveAmount);
+        console.log("Approval successful for", approveAmount, "tokens");
+        showSuccess(`Approved ${approveAmount} tokens for future deposits`);
       } else {
         console.log("✅ Sufficient allowance, no approval needed");
       }
@@ -198,6 +216,11 @@ const PoolPage: React.FC<PoolPageProps> = ({
 
       showSuccess("Deposit successful! Your tokens are now in the private pool.");
       setAmount(""); // Clear the input
+      
+      // Clear relevant cache after successful transaction
+      if (account) {
+        clearCacheAfterDeposit(account, selectedToken.address);
+      }
       
       // Refresh balance after a short delay to ensure transaction is confirmed
       setTimeout(async () => {
@@ -271,6 +294,11 @@ const PoolPage: React.FC<PoolPageProps> = ({
 
       showSuccess("Withdrawal successful! Tokens returned to your wallet.");
       setAmount("");
+      
+      // Clear relevant cache after successful transaction
+      if (account) {
+        clearCacheAfterWithdrawal(account, selectedToken.address);
+      }
       
       // Refresh balance after a short delay to ensure transaction is confirmed
       setTimeout(async () => {

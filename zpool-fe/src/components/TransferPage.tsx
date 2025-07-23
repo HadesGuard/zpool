@@ -3,6 +3,8 @@ import { ethers } from "ethers";
 import { ZPOOL_ADDRESS, ZPOOL_ABI } from "../contracts";
 import { TokenConfig } from "../config/tokens";
 import { useToast } from '../contexts/ToastContext';
+import cacheService from '../services/cacheService';
+
 import '../styles/components/PageContainer.css';
 import '../styles/components/Form.css';
 import '../styles/components/InfoBox.css';
@@ -98,10 +100,8 @@ const TransferPage: React.FC<TransferPageProps> = ({
       setRecipient("");
       setAmount("");
       
-      // Transfer doesn't affect allowance, so no need to refresh
-      // setRefreshTrigger(prev => prev + 1);
-      
       // Refresh balance after a short delay to ensure transaction is confirmed
+      // Note: Cache will be automatically cleared by blockchain event listeners
       setTimeout(async () => {
         await refreshBalance();
       }, 2000);

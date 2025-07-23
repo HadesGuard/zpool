@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import { ZPOOL_ADDRESS, ZPOOL_ABI } from "../contracts";
 import { FHEInstance } from "./fheService";
+import cacheService, { CacheKeys, CacheTTL } from "./cacheService";
 
 export interface BalanceInfo {
   encryptedBalance: string;
@@ -13,8 +14,6 @@ export interface BalanceInfo {
 export class BalanceService {
   private provider: ethers.BrowserProvider | null = null;
   private contract: ethers.Contract | null = null;
-  private cache: Map<string, { data: BalanceInfo; timestamp: number }> = new Map();
-  private readonly CACHE_DURATION = 15000; // 15 seconds (increased from 5 seconds)
 
   private getProvider(): ethers.BrowserProvider {
     if (!this.provider) {
@@ -131,14 +130,13 @@ export class BalanceService {
   async getBalanceInfo(userAddress: string, tokenAddress: string, fheInstance?: FHEInstance): Promise<BalanceInfo> {
     try {
       // Create cache key
-      const cacheKey = `${userAddress}-${tokenAddress}-${fheInstance ? 'with-fhe' : 'no-fhe'}`;
-      const now = Date.now();
+      const cacheKey = CacheKeys.balance(userAddress, tokenAddress, !!fheInstance);
       
       // Check cache first
-      const cached = this.cache.get(cacheKey);
-      if (cached && (now - cached.timestamp) < this.CACHE_DURATION) {
+      const cached = cacheService.get<BalanceInfo>(cacheKey);
+      if (cached !== null) {
         console.log('📦 Using cached balance info');
-        return cached.data;
+        return cached;
       }
       
       console.log('🔄 Getting complete balance info...');
@@ -154,7 +152,7 @@ export class BalanceService {
         };
         
         // Cache the result
-        this.cache.set(cacheKey, { data: result, timestamp: now });
+        cacheService.set(cacheKey, result, CacheTTL.BALANCE);
         return result;
       }
 
@@ -180,7 +178,7 @@ export class BalanceService {
       };
       
       // Cache the result
-      this.cache.set(cacheKey, { data: result, timestamp: now });
+      cacheService.set(cacheKey, result, CacheTTL.BALANCE);
       return result;
     } catch (error) {
       console.error('Error getting balance info:', error);
@@ -200,8 +198,8 @@ export class BalanceService {
     console.log('🔄 Refreshing balance...');
     
     // Clear cache for this user/token combination
-    const cacheKey = `${userAddress}-${tokenAddress}-${fheInstance ? 'with-fhe' : 'no-fhe'}`;
-    this.cache.delete(cacheKey);
+    const cacheKey = CacheKeys.balance(userAddress, tokenAddress, !!fheInstance);
+    cacheService.delete(cacheKey);
     
     return this.getBalanceInfo(userAddress, tokenAddress, fheInstance);
   }
@@ -211,7 +209,7 @@ export class BalanceService {
    */
   clearCache(): void {
     console.log('🗑️ Clearing balance cache');
-    this.cache.clear();
+    cacheService.clearPattern('balance:');
   }
 }
 

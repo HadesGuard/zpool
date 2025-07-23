@@ -37,6 +37,7 @@ const TotalBalanceDisplay: React.FC<TotalBalanceDisplayProps> = ({
 
   const formatBalance = (balance: string) => {
     const num = parseFloat(balance);
+    if (isNaN(num)) return "0";
     if (num === 0) return "0";
     if (num < 0.01) return "< 0.01";
     return num.toFixed(2);
@@ -44,7 +45,10 @@ const TotalBalanceDisplay: React.FC<TotalBalanceDisplayProps> = ({
 
   const getSelectedTokenBalance = () => {
     const tokenBalance = totalBalanceInfo.tokenBalances[selectedToken.address];
-    if (!tokenBalance) return { private: "0", public: "0", total: "0" };
+    
+    if (!tokenBalance) {
+      return { private: "0", public: "0", total: "0" };
+    }
     
     const privateBalance = parseFloat(tokenBalance.privateBalance) || 0;
     const publicBalance = parseFloat(tokenBalance.publicBalance) || 0;
@@ -75,16 +79,16 @@ const TotalBalanceDisplay: React.FC<TotalBalanceDisplayProps> = ({
             </button>
           </div>
           
-          <div className="balance-breakdown-compact">
-            <div className="breakdown-compact-item">
-              <span className="breakdown-icon">🔐 Private</span>
-              <span className="breakdown-value">{selectedBalance.private}</span>
+                      <div className="balance-breakdown-compact">
+              <div className="breakdown-compact-item">
+                <span className="breakdown-icon">🔐 Private</span>
+                <span className="breakdown-value">{selectedBalance.private}</span>
+              </div>
+              <div className="breakdown-compact-item">
+                <span className="breakdown-icon">🌐 Public</span>
+                <span className="breakdown-value">{selectedBalance.public}</span>
+              </div>
             </div>
-            <div className="breakdown-compact-item">
-              <span className="breakdown-icon">🌐 Public</span>
-              <span className="breakdown-value">{selectedBalance.public}</span>
-            </div>
-          </div>
         </div>
         
         {showTokenSelector && (

@@ -8,7 +8,11 @@ import ToastContainer from "./components/ToastContainer";
 import { ToastProvider } from "./contexts/ToastContext";
 import { useFHE } from "./hooks/useFHE";
 import { useTotalBalance } from "./hooks/useTotalBalance";
+import { useBlockchainEvents } from "./hooks/useBlockchainEvents";
+import { TransferNotifications } from "./components/TransferNotifications";
 import { DEFAULT_TOKEN, TokenConfig } from "./config/tokens";
+import { saveWalletState, clearWalletState, autoReconnectWallet } from "./utils/walletPersistence";
+
 import "./styles/App.css";
 
 function App() {
@@ -19,6 +23,7 @@ function App() {
   const [showAccountMenu, setShowAccountMenu] = useState<boolean>(false);
   const [isDisconnecting, setIsDisconnecting] = useState<boolean>(false);
   const [selectedToken, setSelectedToken] = useState<TokenConfig>(DEFAULT_TOKEN);
+  const [autoReconnected, setAutoReconnected] = useState<boolean>(false);
 
   const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111 in hex
 
@@ -57,11 +62,18 @@ function App() {
   // Get total balance for all tokens
   const { refreshBalance, ...totalBalanceInfo } = useTotalBalance(account, fheInstance, getCurrentRpcEndpoints()[currentRpcIndex]?.url || "");
 
+  // Setup blockchain event listeners for real-time cache invalidation
+  const { clearCacheForUser, clearCacheForToken } = useBlockchainEvents({
+    account,
+    rpcUrl: getCurrentRpcEndpoints()[currentRpcIndex]?.url || "",
+    isConnected: !!account
+  });
+
   // Get current RPC provider
   const getCurrentRpcProvider = useCallback((): ethers.JsonRpcProvider => {
     const currentRpcEndpoints = getCurrentRpcEndpoints();
     const currentRpc = currentRpcEndpoints[currentRpcIndex];
-    console.log(`Using RPC: ${currentRpc.name} (${currentRpc.url}) for network: ${network}`);
+
     return new ethers.JsonRpcProvider(currentRpc.url);
   }, [currentRpcIndex, network, getCurrentRpcEndpoints]);
 
@@ -79,10 +91,10 @@ function App() {
 
       if (chainId === SEPOLIA_CHAIN_ID) {
         setIsCorrectNetwork(true);
-        console.log("✅ Connected to Sepolia network");
+  
       } else {
         setIsCorrectNetwork(false);
-        console.log("⚠️ Wrong network detected. Auto-switching to Sepolia...");
+
         // Auto-switch to Sepolia
         await switchToSepolia();
       }
@@ -156,7 +168,19 @@ function App() {
         const accounts = await (window as any).ethereum.request({ 
           method: "eth_requestAccounts" 
         });
-        setAccount(accounts[0]);
+        
+        const account = accounts[0];
+        setAccount(account);
+        
+        // Save wallet state for persistence
+        const walletState = {
+          account,
+          network: await (window as any).ethereum.request({ method: "eth_chainId" }),
+          isConnected: true,
+          lastConnected: Date.now()
+        };
+        saveWalletState(walletState);
+        
       } catch (error) {
         console.error("Error connecting wallet:", error);
       }
@@ -168,13 +192,14 @@ function App() {
   // Disconnect wallet
   const disconnectWallet = () => {
     try {
-      console.log("Disconnecting wallet...");
       setIsDisconnecting(true);
       setAccount("");
       setShowAccountMenu(false);
       setNetwork("");
       setIsCorrectNetwork(false);
-      console.log("Wallet disconnected successfully");
+      
+      // Clear saved wallet state
+      clearWalletState();
     } catch (error) {
       console.error("Error disconnecting wallet:", error);
     } finally {
@@ -186,17 +211,13 @@ function App() {
   const refreshAccount = async () => {
     if ((window as any).ethereum) {
       try {
-        console.log("Manually refreshing account...");
         const accounts = await (window as any).ethereum.request({ 
           method: "eth_accounts" 
         });
-        console.log("Current accounts from refresh:", accounts);
         
         if (accounts.length > 0) {
           setAccount(accounts[0]);
-          console.log("Account refreshed to:", accounts[0]);
         } else {
-          console.log("No accounts found, disconnecting");
           setAccount("");
         }
         setShowAccountMenu(false);
@@ -209,33 +230,23 @@ function App() {
   // Test network connection
   const testConnection = async () => {
     try {
-      console.log("Testing current RPC connection...");
       const provider = getCurrentRpcProvider();
       const network = await provider.getNetwork();
-      console.log("Network info:", network);
       
       // Test contract existence
-      console.log("Testing TestToken contract at:", DEFAULT_TOKEN.address);
       const testTokenCode = await provider.getCode(DEFAULT_TOKEN.address);
-      console.log("TestToken contract code exists:", testTokenCode !== "0x");
-      
-      console.log("Testing ZPool contract at:", ZPOOL_ADDRESS);
       const zpoolCode = await provider.getCode(ZPOOL_ADDRESS);
-      console.log("ZPool contract code exists:", zpoolCode !== "0x");
       
       if (testTokenCode === "0x") {
-        console.error("TestToken contract does not exist at address:", DEFAULT_TOKEN.address);
         alert("TestToken contract not found on this network. Please check deployment.");
         return;
       }
       
       if (zpoolCode === "0x") {
-        console.error("ZPool contract does not exist at address:", ZPOOL_ADDRESS);
         alert("ZPool contract not found on this network. Please check deployment.");
         return;
       }
       
-      console.log("Both contracts exist!");
       alert("Connection test successful! Both contracts are deployed.");
     } catch (error) {
       console.error("Connection test failed:", error);
@@ -266,9 +277,25 @@ function App() {
         if (accounts.length > 0) {
           console.log("Setting new account:", accounts[0]);
           setAccount(accounts[0]);
+          
+          // Update saved wallet state
+          (async () => {
+            try {
+              const walletState = {
+                account: accounts[0],
+                network: await (window as any).ethereum.request({ method: "eth_chainId" }),
+                isConnected: true,
+                lastConnected: Date.now()
+              };
+              saveWalletState(walletState);
+            } catch (error) {
+              console.error("Error updating wallet state:", error);
+            }
+          })();
         } else {
           console.log("No accounts, disconnecting");
           setAccount("");
+          clearWalletState();
         }
       };
 
@@ -303,12 +330,36 @@ function App() {
   // Reset RPC index when network changes
   useEffect(() => {
     if (network) {
-      console.log("Network changed to:", network);
+
       setCurrentRpcIndex(0); // Reset to first RPC for new network
       const currentRpcEndpoints = getCurrentRpcEndpoints();
       setRpcHealth(new Array(currentRpcEndpoints.length).fill(true));
     }
   }, [network, getCurrentRpcEndpoints]);
+
+  // Auto-reconnect on mount
+  useEffect(() => {
+    const attemptAutoReconnect = async () => {
+      if (!account && (window as any).ethereum) {
+        try {
+          const result = await autoReconnectWallet();
+          if (result) {
+            setAccount(result.account);
+            setNetwork(result.network);
+            setIsCorrectNetwork(result.network === SEPOLIA_CHAIN_ID);
+            setAutoReconnected(true);
+            
+            // Clear auto-reconnected flag after 3 seconds
+            setTimeout(() => setAutoReconnected(false), 3000);
+          }
+        } catch (error) {
+          console.error("Auto-reconnect failed:", error);
+        }
+      }
+    };
+
+    attemptAutoReconnect();
+  }, []); // Only run on mount
 
   // Check current account on mount and when network changes
   useEffect(() => {
@@ -318,10 +369,17 @@ function App() {
           const accounts = await (window as any).ethereum.request({ 
             method: "eth_accounts" 
           });
-          console.log("Current accounts:", accounts);
           if (accounts.length > 0 && accounts[0] !== account) {
-            console.log("Updating account from eth_accounts:", accounts[0]);
             setAccount(accounts[0]);
+            
+            // Update saved wallet state
+            const walletState = {
+              account: accounts[0],
+              network: await (window as any).ethereum.request({ method: "eth_chainId" }),
+              isConnected: true,
+              lastConnected: Date.now()
+            };
+            saveWalletState(walletState);
           }
         } catch (error) {
           console.error("Error checking current account:", error);
@@ -329,8 +387,11 @@ function App() {
       }
     };
 
-    checkCurrentAccount();
-  }, [isCorrectNetwork, account]);
+    // Only check if we don't have an account yet or if network changed
+    if (!account || isCorrectNetwork) {
+      checkCurrentAccount();
+    }
+  }, [isCorrectNetwork]); // Remove account from dependencies to prevent loops
 
   // Poll for account changes every 30 seconds
   useEffect(() => {
@@ -344,7 +405,6 @@ function App() {
           });
           
           if (accounts.length > 0 && accounts[0] !== account) {
-            console.log("Account changed detected via polling:", accounts[0]);
             setAccount(accounts[0]);
           }
         } catch (error) {
@@ -382,6 +442,7 @@ function App() {
           disconnectWallet={disconnectWallet}
           switchToSepolia={switchToSepolia}
           SEPOLIA_CHAIN_ID={SEPOLIA_CHAIN_ID}
+          autoReconnected={autoReconnected}
         />
 
         <Body
@@ -405,6 +466,11 @@ function App() {
         <Footer />
       </div>
       <ToastContainer />
+      <TransferNotifications
+        account={account}
+        rpcUrl={getCurrentRpcEndpoints()[currentRpcIndex]?.url || ""}
+        isConnected={!!account}
+      />
     </ToastProvider>
   );
 }

@@ -28,6 +28,7 @@ interface HeaderProps {
   disconnectWallet: () => void;
   switchToSepolia: () => void;
   SEPOLIA_CHAIN_ID: string;
+  autoReconnected?: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -52,10 +53,17 @@ const Header: React.FC<HeaderProps> = ({
   testConnection,
   disconnectWallet,
   switchToSepolia,
-  SEPOLIA_CHAIN_ID
+  SEPOLIA_CHAIN_ID,
+  autoReconnected = false
 }) => {
   return (
     <header className="App-header">
+      {autoReconnected && (
+        <div className="auto-reconnect-notification">
+          <span className="notification-icon">🔗</span>
+          <span className="notification-text">Wallet auto-reconnected successfully!</span>
+        </div>
+      )}
       <div className="header-top">
         <div className="header-content">
           <div className="logo-section">
