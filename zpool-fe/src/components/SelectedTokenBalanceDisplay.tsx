@@ -1,21 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { TotalBalanceInfo } from '../hooks/useTotalBalance';
 import { TokenConfig } from '../config/tokens';
+import { useSelectedTokenBalance } from '../hooks/useSelectedTokenBalance';
 import '../styles/components/PageContainer.css';
 import '../styles/components/TotalBalanceDisplay.css';
 
-interface TotalBalanceDisplayProps {
-  totalBalanceInfo: TotalBalanceInfo;
+interface SelectedTokenBalanceDisplayProps {
+  account: string;
   selectedToken: TokenConfig;
+  fheInstance: any;
+  rpcUrl: string;
   onTokenSelect: (token: TokenConfig) => void;
 }
 
-const TotalBalanceDisplay: React.FC<TotalBalanceDisplayProps> = ({
-  totalBalanceInfo,
+const SelectedTokenBalanceDisplay: React.FC<SelectedTokenBalanceDisplayProps> = ({
+  account,
   selectedToken,
+  fheInstance,
+  rpcUrl,
   onTokenSelect
 }) => {
   const [showTokenSelector, setShowTokenSelector] = useState(false);
+  
+  const { 
+    privateBalance, 
+    publicBalance, 
+    isLoading
+  } = useSelectedTokenBalance(account, selectedToken, fheInstance, rpcUrl);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -43,25 +53,8 @@ const TotalBalanceDisplay: React.FC<TotalBalanceDisplayProps> = ({
     return num.toFixed(2);
   };
 
-  const getSelectedTokenBalance = () => {
-    const tokenBalance = totalBalanceInfo.tokenBalances[selectedToken.address];
-    
-    if (!tokenBalance) {
-      return { private: "0", public: "0", total: "0" };
-    }
-    
-    const privateBalance = parseFloat(tokenBalance.privateBalance) || 0;
-    const publicBalance = parseFloat(tokenBalance.publicBalance) || 0;
-    const totalBalance = privateBalance + publicBalance;
-    
-    return {
-      private: formatBalance(tokenBalance.privateBalance),
-      public: formatBalance(tokenBalance.publicBalance),
-      total: formatBalance(totalBalance.toString())
-    };
-  };
-
-  const selectedBalance = getSelectedTokenBalance();
+  // Import available tokens for selector
+  const { AVAILABLE_TOKENS } = require('../config/tokens');
 
   return (
     <div className="balance-info-compact">
@@ -79,16 +72,20 @@ const TotalBalanceDisplay: React.FC<TotalBalanceDisplayProps> = ({
             </button>
           </div>
           
-                      <div className="balance-breakdown-compact">
-              <div className="breakdown-compact-item">
-                <span className="breakdown-icon">🔐 Private</span>
-                <span className="breakdown-value">{selectedBalance.private}</span>
-              </div>
-              <div className="breakdown-compact-item">
-                <span className="breakdown-icon">🌐 Public</span>
-                <span className="breakdown-value">{selectedBalance.public}</span>
-              </div>
+          <div className="balance-breakdown-compact">
+            <div className="breakdown-compact-item">
+              <span className="breakdown-icon">🔐 Private</span>
+              <span className="breakdown-value">
+                {isLoading ? '...' : formatBalance(privateBalance)}
+              </span>
             </div>
+            <div className="breakdown-compact-item">
+              <span className="breakdown-icon">🌐 Public</span>
+              <span className="breakdown-value">
+                {isLoading ? '...' : formatBalance(publicBalance)}
+              </span>
+            </div>
+          </div>
         </div>
         
         {showTokenSelector && (
@@ -103,20 +100,20 @@ const TotalBalanceDisplay: React.FC<TotalBalanceDisplayProps> = ({
               </button>
             </div>
             <div className="token-options">
-              {Object.values(totalBalanceInfo.tokenBalances).map((tokenBalance) => (
+              {AVAILABLE_TOKENS.map((token: TokenConfig) => (
                 <button
-                  key={tokenBalance.token.address}
-                  className={`token-option ${selectedToken.address === tokenBalance.token.address ? 'selected' : ''}`}
+                  key={token.address}
+                  className={`token-option ${selectedToken.address === token.address ? 'selected' : ''}`}
                   onClick={() => {
-                    onTokenSelect(tokenBalance.token);
+                    onTokenSelect(token);
                     setShowTokenSelector(false);
                   }}
                 >
                   <div className="token-left">
-                    <span className="token-icon">{tokenBalance.token.icon || '🪙'}</span>
+                    <span className="token-icon">{token.icon || '🪙'}</span>
                     <div className="token-details">
-                      <span className="token-symbol">{tokenBalance.token.symbol}</span>
-                      <span className="token-name">{tokenBalance.token.name}</span>
+                      <span className="token-symbol">{token.symbol}</span>
+                      <span className="token-name">{token.name}</span>
                     </div>
                   </div>
                 </button>
@@ -129,4 +126,4 @@ const TotalBalanceDisplay: React.FC<TotalBalanceDisplayProps> = ({
   );
 };
 
-export default TotalBalanceDisplay; 
+export default SelectedTokenBalanceDisplay; 

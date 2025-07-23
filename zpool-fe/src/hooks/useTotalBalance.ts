@@ -207,7 +207,7 @@ export const useTotalBalance = (
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [fetchAllBalances]);
+  }, [fetchAllBalances, account, rpcUrl]);
 
   return {
     ...balanceInfo,

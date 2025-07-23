@@ -2,7 +2,6 @@ import { useEffect, useRef, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { ZPOOL_ADDRESS, ZPOOL_ABI } from '../contracts';
 import cacheService from '../services/cacheService';
-import { AVAILABLE_TOKENS } from '../config/tokens';
 
 interface UseBlockchainEventsProps {
   account: string | null;

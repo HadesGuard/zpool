@@ -7,12 +7,12 @@ import Footer from "./components/Footer";
 import ToastContainer from "./components/ToastContainer";
 import { ToastProvider } from "./contexts/ToastContext";
 import { useFHE } from "./hooks/useFHE";
-import { useTotalBalance } from "./hooks/useTotalBalance";
 import { useBlockchainEvents } from "./hooks/useBlockchainEvents";
 import { TransferNotifications } from "./components/TransferNotifications";
 import CacheStats from "./components/CacheStats";
 import { DEFAULT_TOKEN, TokenConfig } from "./config/tokens";
 import { saveWalletState, clearWalletState, autoReconnectWallet } from "./utils/walletPersistence";
+import cacheService from "./services/cacheService";
 
 import "./styles/App.css";
 
@@ -45,7 +45,7 @@ function App() {
   // Get current RPC endpoints based on network
   const getCurrentRpcEndpoints = useCallback(() => {
     return SEPOLIA_RPC_ENDPOINTS;
-  }, [SEPOLIA_RPC_ENDPOINTS]);
+  }, []);
 
   const [currentRpcIndex, setCurrentRpcIndex] = useState<number>(0);
   const [rpcHealth, setRpcHealth] = useState<boolean[]>(new Array(SEPOLIA_RPC_ENDPOINTS.length).fill(true));
@@ -60,11 +60,17 @@ function App() {
   
   const { fheInstance, isInitialized: fheInitialized, isLoading: fheLoading, error: fheError, isSDKAvailable, encrypt, decrypt, refreshInstance: refreshFHE } = useFHE(fheConfig);
   
-  // Get total balance for all tokens
-  const { refreshBalance, ...totalBalanceInfo } = useTotalBalance(account, fheInstance, getCurrentRpcEndpoints()[currentRpcIndex]?.url || "");
+  // Simple refresh balance function
+  const refreshBalance = useCallback(async () => {
+    // Clear cache for selected token
+    if (account && selectedToken) {
+      const cacheKey = `balance:${account.toLowerCase()}:${selectedToken.address.toLowerCase()}:fhe`;
+      cacheService.delete(cacheKey);
+    }
+  }, [account, selectedToken]);
 
   // Setup blockchain event listeners for real-time cache invalidation
-  const { clearCacheForUser, clearCacheForToken } = useBlockchainEvents({
+  useBlockchainEvents({
     account,
     rpcUrl: getCurrentRpcEndpoints()[currentRpcIndex]?.url || "",
     isConnected: !!account
@@ -92,7 +98,6 @@ function App() {
 
       if (chainId === SEPOLIA_CHAIN_ID) {
         setIsCorrectNetwork(true);
-  
       } else {
         setIsCorrectNetwork(false);
 
@@ -388,7 +393,7 @@ function App() {
     if (!account || isCorrectNetwork) {
       checkCurrentAccount();
     }
-  }, [isCorrectNetwork]); // Remove account from dependencies to prevent loops
+  }, [isCorrectNetwork, account]); // Include account in dependencies
 
   // Poll for account changes every 30 seconds
   useEffect(() => {
@@ -422,7 +427,6 @@ function App() {
           isCorrectNetwork={isCorrectNetwork}
           currentPage={currentPage}
           setCurrentPage={setCurrentPage}
-          totalBalanceInfo={totalBalanceInfo}
           selectedToken={selectedToken}
           onTokenSelect={setSelectedToken}
           showAccountMenu={showAccountMenu}
@@ -439,7 +443,7 @@ function App() {
           disconnectWallet={disconnectWallet}
           switchToSepolia={switchToSepolia}
           SEPOLIA_CHAIN_ID={SEPOLIA_CHAIN_ID}
-
+          fheInstance={fheInstance}
         />
 
         <Body
@@ -453,7 +457,7 @@ function App() {
           isSDKAvailable={isSDKAvailable}
           encrypt={encrypt}
           decrypt={decrypt}
-          refreshFHE={refreshFHE}
+                    refreshFHE={refreshFHE}
           refreshBalance={refreshBalance}
           connectWallet={connectWallet}
           switchToSepolia={switchToSepolia}

@@ -181,7 +181,6 @@
 
 .token-option {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 1rem;
   background: transparent;
@@ -220,35 +219,6 @@
   font-size: 0.8rem;
   color: #888;
   font-weight: 400;
-}
-
-.token-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.3rem;
-  flex-shrink: 0;
-}
-
-.total-balance {
-  font-weight: 600;
-  color: #00d4ff;
-  font-size: 0.9rem;
-}
-
-.balance-breakdown-mini {
-  display: flex;
-  gap: 0.5rem;
-  font-size: 0.7rem;
-  color: #888;
-}
-
-.breakdown-private {
-  color: #4caf50;
-}
-
-.breakdown-public {
-  color: #2196f3;
 }
 
 .total-balance-summary {

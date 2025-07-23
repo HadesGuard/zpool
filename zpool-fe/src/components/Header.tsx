@@ -1,6 +1,5 @@
 import React from 'react';
-import TotalBalanceDisplay from './TotalBalanceDisplay';
-import { TotalBalanceInfo } from '../hooks/useTotalBalance';
+import SelectedTokenBalanceDisplay from './SelectedTokenBalanceDisplay';
 import { TokenConfig } from '../config/tokens';
 import '../styles/components/PageContainer.css';
 import '../styles/components/Header.css';
@@ -11,7 +10,6 @@ interface HeaderProps {
   isCorrectNetwork: boolean;
   currentPage: string;
   setCurrentPage: (page: string) => void;
-  totalBalanceInfo: TotalBalanceInfo;
   selectedToken: TokenConfig;
   onTokenSelect: (token: TokenConfig) => void;
   showAccountMenu: boolean;
@@ -28,7 +26,7 @@ interface HeaderProps {
   disconnectWallet: () => void;
   switchToSepolia: () => void;
   SEPOLIA_CHAIN_ID: string;
-
+  fheInstance: any;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -37,7 +35,6 @@ const Header: React.FC<HeaderProps> = ({
   isCorrectNetwork,
   currentPage,
   setCurrentPage,
-  totalBalanceInfo,
   selectedToken,
   onTokenSelect,
   showAccountMenu,
@@ -54,7 +51,7 @@ const Header: React.FC<HeaderProps> = ({
   disconnectWallet,
   switchToSepolia,
   SEPOLIA_CHAIN_ID,
-
+  fheInstance
 }) => {
   return (
     <header className="App-header">
@@ -73,9 +70,11 @@ const Header: React.FC<HeaderProps> = ({
         {account && isCorrectNetwork && (
           <div className="top-balance">
             <div className="balance-display-compact">
-              <TotalBalanceDisplay
-                totalBalanceInfo={totalBalanceInfo}
+              <SelectedTokenBalanceDisplay
+                account={account}
                 selectedToken={selectedToken}
+                fheInstance={fheInstance}
+                rpcUrl={getCurrentRpcEndpoints()[currentRpcIndex]?.url || ""}
                 onTokenSelect={onTokenSelect}
               />
               <div className="account-info-compact">
