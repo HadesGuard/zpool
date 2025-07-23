@@ -10,40 +10,7 @@
   z-index: 1005;
 }
 
-/* Auto-reconnect notification */
-.auto-reconnect-notification {
-  background: linear-gradient(135deg, #4CAF50, #45a049);
-  color: white;
-  padding: 8px 16px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  animation: slideDown 0.3s ease-out;
-  margin-bottom: 10px;
-}
 
-.notification-icon {
-  font-size: 16px;
-}
-
-.notification-text {
-  font-weight: 600;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 .header-top {
   display: flex;

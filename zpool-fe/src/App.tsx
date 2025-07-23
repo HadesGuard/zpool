@@ -23,7 +23,7 @@ function App() {
   const [showAccountMenu, setShowAccountMenu] = useState<boolean>(false);
   const [isDisconnecting, setIsDisconnecting] = useState<boolean>(false);
   const [selectedToken, setSelectedToken] = useState<TokenConfig>(DEFAULT_TOKEN);
-  const [autoReconnected, setAutoReconnected] = useState<boolean>(false);
+
 
   const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111 in hex
 
@@ -347,10 +347,6 @@ function App() {
             setAccount(result.account);
             setNetwork(result.network);
             setIsCorrectNetwork(result.network === SEPOLIA_CHAIN_ID);
-            setAutoReconnected(true);
-            
-            // Clear auto-reconnected flag after 3 seconds
-            setTimeout(() => setAutoReconnected(false), 3000);
           }
         } catch (error) {
           console.error("Auto-reconnect failed:", error);
@@ -442,7 +438,7 @@ function App() {
           disconnectWallet={disconnectWallet}
           switchToSepolia={switchToSepolia}
           SEPOLIA_CHAIN_ID={SEPOLIA_CHAIN_ID}
-          autoReconnected={autoReconnected}
+
         />
 
         <Body
