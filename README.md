@@ -46,6 +46,16 @@ zpool/
 
 ## 🚀 Quick Start
 
+### 🌐 Live Demo
+
+**Try ZPool now!** Visit our live demo at: **[https://zpool.pages.dev/](https://zpool.pages.dev/)**
+
+- 🔐 **Test Private Operations**: Deposit, transfer, and withdraw with encrypted amounts
+- 🪙 **Multi-Token Support**: Try with different test tokens
+- 💰 **Faucet Integration**: Get test tokens directly from the app
+- 📱 **Mobile Friendly**: Works on desktop and mobile browsers
+- 🔄 **Real-time Updates**: Live balance updates and transaction status
+
 ### Prerequisites
 
 - Node.js 18+ 
@@ -94,6 +104,8 @@ npm start
 ```
 
 Visit `http://localhost:3000` and connect your MetaMask wallet.
+
+**Or try the live demo**: [https://zpool.pages.dev/](https://zpool.pages.dev/)
 
 ## 🔐 FHE Integration
 
