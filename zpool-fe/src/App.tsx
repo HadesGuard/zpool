@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { ethers } from "ethers";
 import { ZPOOL_ADDRESS } from "./contracts";
 import Header from "./components/Header";
@@ -45,7 +45,7 @@ function App() {
   // Get current RPC endpoints based on network
   const getCurrentRpcEndpoints = useCallback(() => {
     return SEPOLIA_RPC_ENDPOINTS;
-  }, []);
+  }, [SEPOLIA_RPC_ENDPOINTS]);
 
   const [currentRpcIndex, setCurrentRpcIndex] = useState<number>(0);
   const [rpcHealth, setRpcHealth] = useState<boolean[]>(new Array(SEPOLIA_RPC_ENDPOINTS.length).fill(true));
@@ -82,7 +82,7 @@ function App() {
     const currentRpc = currentRpcEndpoints[currentRpcIndex];
 
     return new ethers.JsonRpcProvider(currentRpc.url);
-  }, [currentRpcIndex, network, getCurrentRpcEndpoints]);
+  }, [currentRpcIndex, getCurrentRpcEndpoints]);
 
   // Check network and auto-switch to Sepolia if needed
   const checkNetwork = async () => {
@@ -237,7 +237,7 @@ function App() {
   const testConnection = async () => {
     try {
       const provider = getCurrentRpcProvider();
-      const network = await provider.getNetwork();
+      await provider.getNetwork();
       
       // Test contract existence
       const testTokenCode = await provider.getCode(DEFAULT_TOKEN.address);
@@ -361,7 +361,7 @@ function App() {
     };
 
     attemptAutoReconnect();
-  }, []); // Only run on mount
+  }, [account]); // Include account dependency
 
   // Check current account on mount and when network changes
   useEffect(() => {

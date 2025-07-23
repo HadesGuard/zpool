@@ -38,6 +38,80 @@ export const useBlockchainEvents = ({ account, rpcUrl, isConnected }: UseBlockch
     }
   }, []);
 
+  // Fallback polling mechanism
+  const setupPollingFallback = useCallback(async () => {
+    if (!isConnected || !rpcUrl || !account) return;
+
+    try {
+      console.log('📡 Setting up polling fallback for blockchain events');
+      
+      // Create provider for polling
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
+      const contract = new ethers.Contract(ZPOOL_ADDRESS, ZPOOL_ABI, provider);
+
+      // Poll for events every 10 seconds
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          const currentBlock = await provider.getBlockNumber();
+          
+          // Only process new blocks
+          if (currentBlock > lastProcessedBlockRef.current) {
+            console.log(`🔍 Polling for events in block ${currentBlock}`);
+            
+            // Get events from the last processed block to current
+            const fromBlock = lastProcessedBlockRef.current + 1;
+            const toBlock = currentBlock;
+            
+            // Get Transfer events
+            const transferEvents = await contract.queryFilter('Transfer', fromBlock, toBlock);
+            for (const event of transferEvents) {
+              if ('args' in event && event.args) {
+                const { from, to, token } = event.args;
+                if (from && to && token) {
+                  console.log('📡 Polled Transfer event:', { from, to, token });
+                  clearCacheForTransfer(from, to, token);
+                }
+              }
+            }
+            
+            // Get Deposit events
+            const depositEvents = await contract.queryFilter('Deposit', fromBlock, toBlock);
+            for (const event of depositEvents) {
+              if ('args' in event && event.args) {
+                const { user, token } = event.args;
+                if (user && token) {
+                  console.log('📡 Polled Deposit event:', { user, token });
+                  cacheService.clearUserCache(user);
+                  cacheService.clearTokenCache(token);
+                }
+              }
+            }
+            
+            // Get Withdraw events
+            const withdrawEvents = await contract.queryFilter('Withdraw', fromBlock, toBlock);
+            for (const event of withdrawEvents) {
+              if ('args' in event && event.args) {
+                const { user, token } = event.args;
+                if (user && token) {
+                  console.log('📡 Polled Withdraw event:', { user, token });
+                  cacheService.clearUserCache(user);
+                  cacheService.clearTokenCache(token);
+                }
+              }
+            }
+            
+            lastProcessedBlockRef.current = currentBlock;
+          }
+        } catch (error) {
+          console.warn('⚠️ Error polling for events:', error);
+        }
+      }, 10000); // 10 seconds
+      
+    } catch (error) {
+      console.error('❌ Failed to setup polling fallback:', error);
+    }
+  }, [isConnected, rpcUrl, account, clearCacheForTransfer]);
+
   // Setup blockchain event listeners
   const setupEventListeners = useCallback(async () => {
     if (!isConnected || !rpcUrl || !account) {
@@ -118,75 +192,7 @@ export const useBlockchainEvents = ({ account, rpcUrl, isConnected }: UseBlockch
         setupPollingFallback();
       }
     }
-  }, [isConnected, rpcUrl, account, clearCacheForTransfer]);
-
-  // Fallback polling mechanism
-  const setupPollingFallback = useCallback(async () => {
-    if (!providerRef.current || !account) return;
-
-    try {
-      console.log('📡 Setting up polling fallback for blockchain events');
-      
-      const pollForEvents = async () => {
-        try {
-          const currentBlock = await providerRef.current!.getBlockNumber();
-          
-          if (currentBlock > lastProcessedBlockRef.current) {
-            // Get events from last processed block to current block
-            const fromBlock = lastProcessedBlockRef.current || currentBlock - 1;
-            
-            const contract = new ethers.Contract(ZPOOL_ADDRESS, ZPOOL_ABI, providerRef.current!);
-            
-            // Get Transfer events
-            const transferEvents = await contract.queryFilter('Transfer', fromBlock, currentBlock);
-            
-            for (const event of transferEvents) {
-              if ('args' in event && event.args) {
-                const { from, to, token, amount } = event.args;
-                console.log('📡 Polling detected Transfer event:', { from, to, token, amount: amount.toString() });
-                clearCacheForTransfer(from, to, token);
-              }
-            }
-            
-            // Get Deposit events
-            const depositEvents = await contract.queryFilter('Deposit', fromBlock, currentBlock);
-            for (const event of depositEvents) {
-              if ('args' in event && event.args) {
-                const { user, token, amount } = event.args;
-                console.log('📡 Polling detected Deposit event:', { user, token, amount: amount.toString() });
-                if (user) cacheService.clearUserCache(user);
-                if (token) cacheService.clearTokenCache(token);
-              }
-            }
-            
-            // Get Withdraw events
-            const withdrawEvents = await contract.queryFilter('Withdraw', fromBlock, currentBlock);
-            for (const event of withdrawEvents) {
-              if ('args' in event && event.args) {
-                const { user, token, amount } = event.args;
-                console.log('📡 Polling detected Withdraw event:', { user, token, amount: amount.toString() });
-                if (user) cacheService.clearUserCache(user);
-                if (token) cacheService.clearTokenCache(token);
-              }
-            }
-            
-            lastProcessedBlockRef.current = currentBlock;
-          }
-        } catch (error) {
-          console.warn('⚠️ Error in polling fallback:', error);
-        }
-      };
-      
-      // Poll every 10 seconds
-      pollingIntervalRef.current = setInterval(pollForEvents, 10000);
-      
-      // Initial poll
-      await pollForEvents();
-      
-    } catch (error) {
-      console.error('❌ Error setting up polling fallback:', error);
-    }
-  }, [account, clearCacheForTransfer]);
+  }, [isConnected, rpcUrl, account, clearCacheForTransfer, setupPollingFallback]);
 
   // Cleanup event listeners
   const cleanupEventListeners = useCallback(() => {
